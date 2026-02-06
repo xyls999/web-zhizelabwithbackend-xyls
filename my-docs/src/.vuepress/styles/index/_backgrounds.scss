@@ -1,0 +1,51 @@
+// 背景与性能样式：移除装饰背景、性能优化与打印样式。
+// 作用范围：全站（theme container、页面背景、图片与卡片）。
+// 适用场景：去除背景纹理、提升渲染性能与打印清晰度。
+
+// ========== 移除所有网格和框框背景装饰 ==========
+.theme-container,
+.vp-page,
+body {
+  // 移除可能的网格背景
+  background-image: none !important;
+
+  &::before,
+  &::after {
+    background-image: none !important;
+  }
+}
+
+// 移除特定元素的装饰背景
+[class*="grid"],
+[class*="pattern"],
+[class*="decoration"] {
+  background-image: none !important;
+  &::before,
+  &::after {
+    display: none !important;
+  }
+}
+
+// ========== 性能优化 ==========
+img {
+  content-visibility: auto;
+}
+
+.vp-feature,
+.vp-highlight {
+  contain: layout style paint;
+}
+
+// ========== 打印样式 aaa 网页文康==========
+@media print {
+  .vp-hero-info::after {
+    display: none;
+  }
+
+  .vp-hero-info,
+  .vp-feature-item,
+  .vp-highlight-item {
+    box-shadow: none !important;
+    background: white !important;
+  }
+}

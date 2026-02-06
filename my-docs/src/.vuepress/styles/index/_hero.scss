@@ -1,0 +1,160 @@
+// 首页 Hero 区域样式：布局结构、主标题/副标题、Logo、按钮组。
+// 作用范围：站点首页顶部 Hero 模块（.vp-hero-* 相关元素）。
+// 适用场景：调整首屏视觉层级与按钮交互。
+
+// 全局强制所有 Hero 区域占满整个屏幕（减去导航栏高度）
+.vp-hero-info-wrapper {
+  height: calc(100vh - var(--navbar-height)) !important;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+.vp-hero-info {
+  flex-direction: column !important;
+  padding: 6rem 2rem !important;
+  gap: 3rem !important;
+  position: relative;
+  // 不需要 min-height，由父容器 .vp-hero-info-wrapper 控制
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  // ⭐ 背景设置 - 简洁背景，无装饰框
+  background: transparent !important;
+  background-image: none !important;
+
+  [data-theme="dark"] & {
+    background: transparent !important;
+    background-image: none !important;
+  }
+
+  // 移除所有背景装饰（包括网格、框框等）
+  &::before,
+  &::after {
+    display: none !important;
+    content: none !important;
+    background: none !important;
+    background-image: none !important;
+  }
+
+  // Logo/图片
+  .vp-hero-image {
+    order: -1;
+    margin: 3rem auto 0rem;
+    max-height: 450px !important;
+    position: relative;
+    z-index: 1;
+    filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.1));
+
+    img {
+      transition: transform 0.3s ease;
+    }
+
+    &:hover img {
+      transform: scale(1.05);
+    }
+  }
+
+  // 文字内容
+  .vp-hero-infos {
+    order: 1;
+    text-align: center;
+    padding: 1rem 1rem;
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+
+    // 主标题 - 进一步增大字体
+    h1 {
+      font-size: clamp(2.2rem, 8vw, 4.5rem) !important;
+      font-weight: 900 !important;
+      letter-spacing: -0.04em;
+      line-height: 1.1;
+      margin-bottom: 2rem !important;
+
+      // 静态渐变文字
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+
+      [data-theme="dark"] & {
+        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 50%, #d299c2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+    }
+
+    // 副标题/描述 - 进一步增大字体
+    #main-description {
+      color: rgb(0, 0, 0) !important;
+      font-size: clamp(1.4rem, 2.8vw, 2rem) !important;
+      font-weight: 500;
+      line-height: 1.8;
+      max-width: 850px;
+      margin: 2rem auto 3rem !important;
+      padding: 0 1.5rem;
+
+      [data-theme="dark"] & {
+        color: #cbd5e0 !important;
+      }
+    }
+  }
+
+  // 按钮组
+  .vp-action-wrapper {
+    margin-top: 3rem !important;
+    gap: 1.2rem !important;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+
+    .vp-action-button {
+      padding: 1.1rem 2.8rem !important;
+      font-size: 1.15rem !important;
+      font-weight: 600;
+      border-radius: 50px !important;
+      border: none;
+      transition: all 0.25s ease;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.25);
+      }
+
+      &:active {
+        transform: translateY(0);
+      }
+
+      // 主按钮
+      &.primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #ffffff !important;
+
+        &:hover {
+          background: linear-gradient(135deg, #5568d3 0%, #653a8b 100%);
+        }
+      }
+
+      // 次按钮
+      &:not(.primary) {
+        background: rgba(255, 255, 255, 0.95);
+        color: #667eea !important;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+
+        [data-theme="dark"] & {
+          background: rgba(45, 55, 72, 0.95);
+          color: #a8edea !important;
+        }
+
+        &:hover {
+          background: rgba(102, 126, 234, 0.08);
+        }
+      }
+    }
+  }
+}

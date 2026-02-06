@@ -1,0 +1,29 @@
+import { defineUserConfig } from "vuepress";
+import { getDirname, path } from "vuepress/utils";
+
+import theme from "./theme.js";
+
+const __dirname = getDirname(import.meta.url);
+
+export default defineUserConfig({
+  base: "/",
+
+  lang: "zh-CN",
+  title: "智泽实验室",
+  description: "⼈⼯智能+产业融合升级的⻅证者、实践者、推动者",
+
+  // 网站图标（浏览器标签页小图标）
+  head: [
+    ["link", { rel: "icon", href: "/images/logos/zhizelab_logo_ss.png" }],
+    // 不蒜子访问量统计脚本
+    ["script", { async: true, src: "https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" }],
+  ],
+
+  theme,
+
+  // 客户端配置文件
+  clientConfigFile: path.resolve(__dirname, "./client.ts"),
+
+  // 和 PWA 一起启用
+  // shouldPrefetch: false,
+});

@@ -1,0 +1,101 @@
+// 响应式断点样式：根据屏宽调整 Hero/Features/Highlights 的布局与字号。
+// 作用范围：全站，但主要针对首页模块的移动端适配。
+// 适用场景：优化平板/手机显示效果。
+
+// ========== 响应式设计 ==========
+@media (max-width: 1200px) {
+  .vp-hero-info {
+    padding: 5rem 1.5rem !important;
+  }
+
+  .vp-feature-wrapper,
+  .vp-highlight-wrapper {
+    padding: 3rem 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  // 移动端也保持全屏滚动效果
+  .vp-feature-wrapper,
+  .vp-highlight-wrapper {
+    min-height: 100vh !important;
+    padding: 2rem 1rem;
+  }
+
+  .vp-hero-info {
+    padding: 3rem 1rem !important;
+    // 移除 min-height: auto，让全屏效果在移动端也生效
+
+    .vp-hero-image {
+      max-height: 300px !important;
+      margin: 1.5rem auto 0.5rem;
+    }
+
+    .vp-hero-infos {
+      padding: 1rem 0.5rem;
+
+      #main-description {
+        padding: 0 1rem;
+        margin: 1.5rem auto 2rem !important;
+      }
+    }
+
+    .vp-action-wrapper {
+      flex-direction: column;
+      padding: 0 1rem;
+      gap: 1rem !important;
+
+      .vp-action-button {
+        width: 100%;
+        padding: 0.9rem 2rem !important;
+        font-size: 1.1rem !important;
+      }
+    }
+  }
+
+  .vp-feature-item,
+  .vp-highlight-item {
+    padding: 0.3rem 0.5rem !important;
+    margin: 0.2rem 0 !important;  // 再缩小一半
+
+    .vp-feature,
+    .vp-highlight {
+      padding: 0.4rem !important;  // 再缩小
+      margin: 0.2rem !important;   // 再缩小一半
+    }
+
+    // 移动端访问统计卡片调整
+    .vp-highlights-wrapper {
+      flex-direction: column !important;  // 小屏幕竖向排列
+      gap: 1rem !important;
+
+      .vp-highlight {
+        flex: 1 1 auto !important;
+        max-width: 100% !important;
+        min-width: 100% !important;
+      }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .vp-feature-wrapper,
+  .vp-highlight-wrapper {
+    padding: 1.5rem 0.8rem;
+  }
+
+  .vp-hero-info {
+    padding: 2rem 0.8rem !important;
+
+    .vp-hero-image {
+      max-height: 250px !important;
+    }
+
+    .vp-action-wrapper {
+      .vp-action-button {
+        padding: 0.8rem 1.5rem !important;
+        font-size: 1.05rem !important;
+      }
+    }
+  }
+}
