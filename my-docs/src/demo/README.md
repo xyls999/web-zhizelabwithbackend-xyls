@@ -7,3 +7,9 @@ category:
 ---
 
 这里是点击demo主页
+
+## 快速入口
+
+- [资源库](./resources/)
+- [成员名录](./members-list.md)
+- [成果展示](./success.md)

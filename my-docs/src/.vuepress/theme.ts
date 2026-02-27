@@ -11,7 +11,7 @@ export default hopeTheme({
     url: "https://mister-hope.com",
   },
 
-  logo: "/images/logos/zhizelab_logo_s.png",
+  logo: "/images/logos/zhizelab_logo_ss.png",
 
   repo: "zhizelab",
 
@@ -22,6 +22,9 @@ export default hopeTheme({
 
   // 侧边栏
   sidebar,
+
+  // 使用统一蓝白视觉，不提供暗色切换
+  darkmode: "disable",
 
   // 页脚
   footer: "默认页脚",

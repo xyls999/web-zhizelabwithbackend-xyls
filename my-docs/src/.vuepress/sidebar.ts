@@ -23,26 +23,29 @@ export default sidebar({
           link: "success",
         },
         {
-          text: "ROS培训",
-          icon: "robot",
-          prefix: "ROStrain/",
-          link: "ROStrain/",
+          text: "资源库",
+          icon: "folder-tree",
+          prefix: "resources/",
+          link: "resources/",
           collapsible: true,
           expanded: false,
+          children: [
+            {
+              text: "ROS培训",
+              icon: "robot",
+              prefix: "ROStrain/",
+              link: "ROStrain/",
+              collapsible: true,
+              expanded: false,
               children: [
                 "environment",
                 "nav",
                 "imageProcessing",
                 "visionTraining",
               ],
-        },
-        {
-          text: "硬件培训",
-          icon: "plug",
-          prefix: "HardWare/",
-          link: "HardWare/",
-          children: [
-
+            },
+            "hardware-training",
+            "machine-learning-training",
           ],
         }
       ],

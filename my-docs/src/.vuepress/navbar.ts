@@ -1,28 +1,9 @@
 import { navbar } from "vuepress-theme-hope";
 
 export default navbar([
-  "/",
-  "/portfolio",
-  "/join-us",
-  "/demo/",
-  "/visitor-dashboard",
-  {
-    text: "指南",
-    icon: "lightbulb",
-    prefix: "/guide/",
-    children: [
-      {
-        text: "Bar",
-        icon: "lightbulb",
-        prefix: "bar/",
-        children: ["baz", { text: "...", icon: "ellipsis", link: "" }],
-      },
-      {
-        text: "Foo",
-        icon: "lightbulb",
-        prefix: "foo/",
-        children: ["ray", { text: "...", icon: "ellipsis", link: "" }],
-      },
-    ],
-  },
+  { text: "首页", icon: "house", link: "/" },
+  { text: "负责老师", icon: "user-tie", link: "/portfolio" },
+  { text: "资源库", icon: "flask-vial", link: "/demo/resources/" },
+  { text: "研究队伍", icon: "users", link: "/demo/members-list" },
+  { text: "加入我们", icon: "user-plus", link: "/join-us" },
 ]);
