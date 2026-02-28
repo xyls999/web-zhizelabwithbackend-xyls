@@ -124,6 +124,20 @@
       font-size: 1.45rem;
     }
   }
+
+  .lab-home .gesture-control {
+    right: 0.65rem;
+    left: 0.65rem;
+    width: auto;
+    top: auto;
+    bottom: 0.64rem;
+    padding: 0.64rem 0.66rem;
+  }
+
+  .lab-home .gesture-status,
+  .lab-home .gesture-tips {
+    font-size: 0.7rem;
+  }
 }
 
 @media (max-width: 560px) {

@@ -1,147 +1,26 @@
 <template>
-  <div class="lab-home">
-    <section id="home" class="banner">
-      <img class="banner-image" src="/images/main_img/light-in-main.jpg" alt="实验室首页横幅" />
-      <div class="banner-mask"></div>
-      <div class="banner-effects" aria-hidden="true">
-        <span
-          v-for="(drop, index) in heroRainDrops"
-          :key="`drop-${index}`"
-          class="rain-drop"
-          :style="{
-            '--rain-left': drop.left,
-            '--rain-delay': drop.delay,
-            '--rain-duration': drop.duration,
-            '--rain-length': drop.length,
-            '--rain-opacity': drop.opacity,
-          }"
-        ></span>
-        <span class="water-wave wave-1"></span>
-        <span class="water-wave wave-2"></span>
-        <span class="water-wave wave-3"></span>
-      </div>
-
-      <div class="title-box">
-        <img class="hero-logo" src="/images/logos/zhizelab_logo.png" alt="智泽实验室 Logo" />
-        <h1 class="hero-title">河海大学智泽实验室</h1>
-        <div class="hero-chip-list">
-          <span v-for="tag in heroTags" :key="tag">{{ tag }}</span>
-        </div>
-        <div class="hero-actions">
-          <a href="/demo/" class="hero-main-action">了解更多</a>
-          <a href="/join-us" class="hero-sub-action">加入我们</a>
-        </div>
-      </div>
-
-      <div class="gesture-control" :class="{ 'is-active': isGestureControlActive }">
-        <div class="gesture-control-head">
-          <strong>手势操控</strong>
-          <button type="button" class="gesture-toggle" :disabled="!isGestureControlSupported || isGestureControlLoading" @click="toggleGestureControl">
-            {{ gestureButtonText }}
-          </button>
-        </div>
-        <p class="gesture-status">{{ gestureStatusText }}</p>
-        <p class="gesture-tips">握拳：上滚｜张开：下滚｜右挥展开侧边栏｜左挥收起侧边栏｜也可用键盘方向键</p>
-        <video ref="gestureVideoRef" class="gesture-video" autoplay muted playsinline></video>
-      </div>
-
-      <button type="button" class="hero-explore-hub" @click="scrollToSection('about')" aria-label="explore zhize lab">
-        <span class="explore-shape" aria-hidden="true"></span>
-        <span class="explore-body">探索</span>
+  <div v-if="shouldRender" class="global-gesture-control" :class="{ 'is-active': isGestureControlActive }">
+    <div class="global-gesture-head">
+      <strong>手势操控</strong>
+      <button
+        type="button"
+        class="global-gesture-toggle"
+        :disabled="!isGestureControlSupported || isGestureControlLoading"
+        @click="toggleGestureControl"
+      >
+        {{ gestureButtonText }}
       </button>
-    </section>
-
-    <section id="about" class="mode mode-about">
-      <div class="mode-header">
-        <h2>关于实验室</h2>
-        <a href="/demo/">了解更多</a>
-      </div>
-      <div class="mode-about-layout">
-        <article class="mode-panel intro-text">
-          <p class="intro-lead">
-            智泽实验室依托河海大学学科优势，围绕“人工智能 + 行业场景”开展持续研究与工程实践，强调从理论到落地的完整闭环。
-          </p>
-          <p>
-            团队以真实问题为牵引，聚焦智慧水利、计算机视觉、机器人系统与工程部署，构建从数据治理、模型训练到系统迭代的全流程能力，
-            让科研成果在真实场景中可验证、可复用、可扩展。
-          </p>
-          <ul class="about-points">
-            <li>方向聚焦：人工智能应用、嵌入式系统、ROS 机器人与工程化开发</li>
-            <li>组织方式：项目驱动 + 比赛训练 + 技术分享，形成稳定成长路径</li>
-            <li>能力目标：解决复杂场景问题，提升成员独立研发与协同交付能力</li>
-          </ul>
-        </article>
-        <aside class="mode-panel about-visual">
-          <figure class="about-figure">
-            <img src="/images/join-us_img/DSC_4034.JPG" alt="智泽实验室研讨交流" />
-            <figcaption>实验室合照</figcaption>
-          </figure>
-        </aside>
-      </div>
-    </section>
-
-    <section id="research-activity" class="mode mode-research section-main-dark">
-      <div class="mode-header">
-        <h2>学习研究与比赛活动</h2>
-        <a href="/demo/success">查看全部</a>
-      </div>
-      <div class="research-activity-layout">
-        <div class="research-grid">
-          <a v-for="item in researchItems" :key="item.title" class="research-card" :href="item.link">
-            <img :src="item.image" :alt="item.title" />
-            <span class="research-tag">{{ item.tag }}</span>
-            <span class="research-title">{{ item.title }}</span>
-            <p class="research-desc">{{ item.desc }}</p>
-          </a>
-        </div>
-        <aside class="mode-panel activity-timeline">
-          <h3 class="panel-title">近期活动</h3>
-          <ul>
-            <li v-for="item in activityItems" :key="item.title">
-              <p class="activity-date">{{ item.date }}</p>
-              <h4>{{ item.title }}</h4>
-              <p class="activity-place">{{ item.place }}</p>
-              <a :href="item.link">查看详情</a>
-            </li>
-          </ul>
-        </aside>
-      </div>
-    </section>
-
-    <section id="gallery" class="mode mode-gallery">
-      <div class="mode-header">
-        <h2>光影记录</h2>
-        <a href="/join-us">更多记录</a>
-      </div>
-      <div class="gallery-grid">
-        <a v-for="item in galleryItems" :key="item.image" class="gallery-card" :href="item.link">
-          <img :src="item.image" :alt="item.title" />
-          <span>{{ item.title }}</span>
-        </a>
-      </div>
-    </section>
-
-    <footer class="lab-footer">
-      <div class="footer-brand">
-        <img src="/images/logos/zhizelab_logo_s.png" alt="智泽实验室图标" />
-        <p>河海大学智泽实验室</p>
-      </div>
-      <div class="footer-links">
-        <a v-for="item in footerLinks" :key="item.title" :href="item.link">{{ item.title }}</a>
-      </div>
-      <div class="footer-contact">
-        <p>联系邮箱：zhizelab@hhu.edu.cn（待确认）</p>
-        <p>联系电话：025-0000 0000（待确认）</p>
-        <p>地址：江苏省南京市西康路 1 号（待确认）</p>
-      </div>
-    </footer>
+    </div>
+    <p class="global-gesture-status">{{ gestureStatusText }}</p>
+    <p class="global-gesture-tips">握拳：上滚｜张开：下滚｜右挥展开侧边栏｜左挥收起侧边栏｜也可用键盘方向键</p>
+    <video ref="gestureVideoRef" class="global-gesture-video" autoplay muted playsinline></video>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { usePageData } from "vuepress/client";
 
-let modeObserver: IntersectionObserver | null = null;
 let gestureModel: HandTrackModel | null = null;
 let gestureModelLoadingTask: Promise<void> | null = null;
 let gestureStream: MediaStream | null = null;
@@ -186,6 +65,7 @@ const gestureClassLabelMap: Record<number, string> = {
   6: "pointtip",
   7: "pinchtip",
 };
+
 const gestureHandLabelSet = new Set(["open", "closed", "pinch", "point", "pointtip", "pinchtip", "hand"]);
 const gestureSwipeThresholdX = 0.06;
 const gestureTrackResetAfterMs = 900;
@@ -193,6 +73,9 @@ const gestureCooldownMs = 600;
 const gestureHintIntervalMs = 680;
 const gestureDirectionRatio = 1.02;
 const gesturePoseStableFrames = 3;
+
+const page = usePageData();
+const shouldRender = computed(() => !Boolean(page.value.frontmatter.home));
 
 const gestureVideoRef = ref<HTMLVideoElement | null>(null);
 const isGestureControlSupported = ref(false);
@@ -205,45 +88,6 @@ const gestureButtonText = computed(() => {
   if (isGestureControlLoading.value) return "加载中...";
   return isGestureControlActive.value ? "关闭" : "开启";
 });
-
-const initModeTurnAnimation = (): void => {
-  const modes = Array.from(document.querySelectorAll<HTMLElement>(".lab-home .mode"));
-  if (!modes.length || typeof window.IntersectionObserver === "undefined") return;
-
-  modeObserver = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        const element = entry.target as HTMLElement;
-        if (entry.isIntersecting) {
-          element.classList.add("mode-visible");
-        } else if (entry.boundingClientRect.top > 0) {
-          element.classList.remove("mode-visible");
-        }
-      });
-    },
-    {
-      threshold: [0.2, 0.38, 0.58],
-      rootMargin: "-5% 0px -10% 0px",
-    },
-  );
-
-  modes.forEach((mode) => modeObserver?.observe(mode));
-};
-
-const scrollToSection = (id: string): void => {
-  const element = document.getElementById(id);
-  if (!element) return;
-
-  if (id === "home") {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    return;
-  }
-
-  const navbar = document.querySelector<HTMLElement>(".vp-navbar");
-  const offset = navbar?.offsetHeight ?? 70;
-  const top = element.getBoundingClientRect().top + window.scrollY - offset;
-  window.scrollTo({ top, behavior: "smooth" });
-};
 
 const getPredictionScore = (prediction: HandTrackPrediction): number => {
   if (typeof prediction.score === "number") return prediction.score;
@@ -518,7 +362,7 @@ const stopGestureControl = (statusText?: string): void => {
 };
 
 const runGestureLoop = async (): Promise<void> => {
-  if (!isGestureControlActive.value || !gestureModel || !gestureVideoRef.value) return;
+  if (!shouldRender.value || !isGestureControlActive.value || !gestureModel || !gestureVideoRef.value) return;
 
   const video = gestureVideoRef.value;
   if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
@@ -595,7 +439,7 @@ const ensureGestureModelLoaded = async (): Promise<void> => {
 };
 
 const startGestureControl = async (): Promise<void> => {
-  if (!isGestureControlSupported.value || isGestureControlActive.value || isGestureControlLoading.value) return;
+  if (!shouldRender.value || !isGestureControlSupported.value || isGestureControlActive.value || isGestureControlLoading.value) return;
 
   const video = gestureVideoRef.value;
   if (!video) return;
@@ -648,7 +492,6 @@ const toggleGestureControl = (): void => {
     stopGestureControl();
     return;
   }
-
   void startGestureControl();
 };
 
@@ -660,7 +503,7 @@ const shouldIgnoreKeyboardTarget = (target: EventTarget | null): boolean => {
 };
 
 const handleArrowKeyControl = (event: KeyboardEvent): void => {
-  if (shouldIgnoreKeyboardTarget(event.target)) return;
+  if (!shouldRender.value || shouldIgnoreKeyboardTarget(event.target)) return;
 
   if (event.key === "ArrowUp") {
     event.preventDefault();
@@ -686,95 +529,143 @@ const handleArrowKeyControl = (event: KeyboardEvent): void => {
   }
 };
 
+watch(
+  shouldRender,
+  (visible) => {
+    if (!visible) {
+      stopGestureControl();
+      return;
+    }
+
+    gestureStatusText.value = isGestureControlSupported.value
+      ? "点击“开启”后授权摄像头，即可用手势控制页面。"
+      : "当前浏览器不支持摄像头能力，无法使用手势控制。";
+  },
+  { immediate: true },
+);
+
 onMounted(() => {
-  initModeTurnAnimation();
   window.addEventListener("keydown", handleArrowKeyControl);
   isGestureControlSupported.value = Boolean(navigator.mediaDevices?.getUserMedia);
-  gestureStatusText.value = isGestureControlSupported.value
-    ? "点击“开启”后授权摄像头，即可用手势控制页面。"
-    : "当前浏览器不支持摄像头能力，无法使用手势控制。";
+
+  if (shouldRender.value) {
+    gestureStatusText.value = isGestureControlSupported.value
+      ? "点击“开启”后授权摄像头，即可用手势控制页面。"
+      : "当前浏览器不支持摄像头能力，无法使用手势控制。";
+  }
 });
 
 onBeforeUnmount(() => {
   stopGestureControl();
   window.removeEventListener("keydown", handleArrowKeyControl);
-  if (modeObserver) {
-    modeObserver.disconnect();
-    modeObserver = null;
-  }
 });
-
-const heroTags = ["人工智能应用", "工程部署", "嵌入式", "ROS机器人", "大模型"];
-
-const heroRainDrops = Array.from({ length: 44 }, (_, index) => {
-  const left = (index * 17.3) % 100;
-  return {
-    left: `${left.toFixed(2)}%`,
-    delay: `${((index * 0.19) % 6.2).toFixed(2)}s`,
-    duration: `${(2.35 + (index % 8) * 0.21).toFixed(2)}s`,
-    length: `${8 + (index % 8) * 2.6}px`,
-    opacity: `${(0.23 + (index % 5) * 0.1).toFixed(2)}`,
-  };
-});
-
-const metricItems = [
-  { value: "12+", label: "在研课题" },
-  { value: "6", label: "核心方向" },
-  { value: "20+", label: "合作单位" },
-  { value: "40+", label: "年度活动" },
-];
-
-const researchItems = [
-  {
-    title: "中国软件杯挑战赛",
-    tag: "Research",
-    desc: "构建机器狗在复杂环境中的自主导航与任务执行能力。",
-    image: "/images/join-us_img/DSC_5924-已增强-降噪-scaled.jpg",
-    link: "/demo/success",
-  },
-  {
-    title: "智慧社区算法精英赛",
-    tag: "Perception",
-    desc: "结合真实场景的计算机视觉和机器人应用",
-    image: "/images/join-us_img/2025_AIC_group_total.jpg",
-    link: "/demo/success",
-  },
-  {
-    title: "全国服务外包大赛",
-    tag: "Model",
-    desc: "构建完善的社区识别体系与智能化应用。",
-    image: "/images/join-us_img/IMG_20251219_144019.jpg",
-    link: "/demo/success",
-  },
-  {
-    title: "计算机设计大赛",
-    tag: "Engineering",
-    desc: "面向计算机的算法与系统设计竞赛，推动技术落地与创新。",
-    image: "/images/join-us_img/8700ace640b91a0fd67047b4cdb88ce-scaled.jpg",
-    link: "/demo/success",
-  },
-];
-
-const activityItems = [
-  { date: "2025-12-30", title: "智慧社区比赛完赛", place: "江阴", link: "/demo/resources/ROStrain" },
-  { date: "2026-01-18", title: "寒假学习计划与任务分配", place: "河海大学", link: "/demo/success"},
-  { date: "2026-03-02", title: "寒假学习成果验收", place: "河海大学", link: "/demo/success" },
-];
-
-const galleryItems = [
-  { title: "实验室团队", image: "/images/join-us_img/2025_AIC_group_total.jpg", link: "/join-us" },
-  { title: "校园风景", image: "/images/main_img/hhu-bridge.png", link: "/demo/success" },
-  { title: "技术交流", image: "/images/join-us_img/IMG_20251219_143906.jpg", link: "/join-us" },
-  { title: "比赛记录", image: "/images/join-us_img/IMG_20251219_141930.jpg", link: "/demo/resources/" },
-  { title: "活动剪影", image: "/images/join-us_img/IMG_20251219_143946.jpg", link: "/join-us" },
-  { title: "团队合作", image: "/images/join-us_img/IMG_20251219_144019.jpg", link: "/join-us" },
-];
-
-const footerLinks = [
-  { title: "首页", link: "/" },
-  { title: "关于实验室", link: "/demo/" },
-  { title: "成员名录", link: "/demo/members-list" },
-  { title: "资源库", link: "/demo/resources/" },
-  { title: "加入我们", link: "/join-us" },
-];
 </script>
+
+<style scoped>
+.global-gesture-control {
+  position: fixed;
+  top: calc(var(--navbar-height) + clamp(0.45rem, 1.6vh, 0.95rem));
+  right: clamp(0.85rem, 2.8vw, 1.9rem);
+  z-index: 132;
+  width: min(340px, 40vw);
+  max-width: calc(100vw - 1.2rem);
+  padding: 0.72rem 0.78rem;
+  border-radius: 14px;
+  border: 1px solid rgba(150, 188, 220, 0.45);
+  background: rgba(5, 16, 34, 0.86);
+  color: #eef6ff;
+  box-shadow: 0 16px 32px rgba(2, 12, 24, 0.34);
+  backdrop-filter: blur(6px);
+}
+
+.global-gesture-control.is-active {
+  border-color: rgba(172, 221, 255, 0.72);
+  box-shadow:
+    0 18px 36px rgba(1, 12, 28, 0.44),
+    0 0 0 1px rgba(163, 216, 255, 0.25) inset;
+}
+
+.global-gesture-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.72rem;
+}
+
+.global-gesture-head strong {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.global-gesture-toggle {
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.32rem 0.75rem;
+  background: linear-gradient(110deg, #e7f5ff 0%, #9ed3ff 55%, #69b4ff 100%);
+  color: #113667;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.global-gesture-toggle:hover:enabled {
+  transform: translateY(-1px);
+}
+
+.global-gesture-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.global-gesture-status,
+.global-gesture-tips {
+  margin: 0.52rem 0 0;
+  font-size: 0.74rem;
+  line-height: 1.5;
+}
+
+.global-gesture-status {
+  color: #f4f9ff;
+}
+
+.global-gesture-tips {
+  color: rgba(212, 236, 255, 0.84);
+}
+
+.global-gesture-video {
+  display: none;
+  width: 100%;
+  margin-top: 0.58rem;
+  border-radius: 10px;
+  border: 1px solid rgba(166, 210, 245, 0.4);
+  background: rgba(2, 9, 18, 0.88);
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+.global-gesture-control.is-active .global-gesture-video {
+  display: block;
+}
+
+@media (max-width: 760px) {
+  .global-gesture-control {
+    right: 0.65rem;
+    left: 0.65rem;
+    width: auto;
+    top: auto;
+    bottom: 0.64rem;
+    padding: 0.64rem 0.66rem;
+  }
+
+  .global-gesture-status,
+  .global-gesture-tips {
+    font-size: 0.7rem;
+  }
+}
+</style>

@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "echarts": "^6.0.0",
-    "echarts-wordcloud": "^2.1.0"
+    "echarts-wordcloud": "^2.1.0",
+    "handtrackjs": "^0.1.5"
   }
 }

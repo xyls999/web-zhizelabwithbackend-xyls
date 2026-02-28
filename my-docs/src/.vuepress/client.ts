@@ -3,9 +3,12 @@ import { defineClientConfig } from "vuepress/client";
 
 import LabHomePage from "./components/LabHomePage.vue";
 import TeamMembersPage from "./components/TeamMembersPage.vue";
+import GlobalGestureControl from "./components/GlobalGestureControl.vue";
 import VisitorDashboard from "./components/VisitorDashboard.vue";
 
 export default defineClientConfig({
+  rootComponents: [GlobalGestureControl],
+
   enhance({ app }) {
     app.component("VisitorDashboard", VisitorDashboard);
     app.component("LabHomePage", LabHomePage);
