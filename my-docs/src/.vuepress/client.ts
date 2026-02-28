@@ -4,10 +4,11 @@ import { defineClientConfig } from "vuepress/client";
 import LabHomePage from "./components/LabHomePage.vue";
 import TeamMembersPage from "./components/TeamMembersPage.vue";
 import GlobalGestureControl from "./components/GlobalGestureControl.vue";
+import GlobalAIAssistant from "./components/GlobalAIAssistant.vue";
 import VisitorDashboard from "./components/VisitorDashboard.vue";
 
 export default defineClientConfig({
-  rootComponents: [GlobalGestureControl],
+  rootComponents: [GlobalGestureControl, GlobalAIAssistant],
 
   enhance({ app }) {
     app.component("VisitorDashboard", VisitorDashboard);

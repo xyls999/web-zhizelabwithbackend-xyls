@@ -33,18 +33,6 @@
         </div>
       </div>
 
-      <div class="gesture-control" :class="{ 'is-active': isGestureControlActive }">
-        <div class="gesture-control-head">
-          <strong>手势操控</strong>
-          <button type="button" class="gesture-toggle" :disabled="!isGestureControlSupported || isGestureControlLoading" @click="toggleGestureControl">
-            {{ gestureButtonText }}
-          </button>
-        </div>
-        <p class="gesture-status">{{ gestureStatusText }}</p>
-        <p class="gesture-tips">握拳：上滚｜张开：下滚｜右挥展开侧边栏｜左挥收起侧边栏｜也可用键盘方向键</p>
-        <video ref="gestureVideoRef" class="gesture-video" autoplay muted playsinline></video>
-      </div>
-
       <button type="button" class="hero-explore-hub" @click="scrollToSection('about')" aria-label="explore zhize lab">
         <span class="explore-shape" aria-hidden="true"></span>
         <span class="explore-body">探索</span>
@@ -688,7 +676,6 @@ const handleArrowKeyControl = (event: KeyboardEvent): void => {
 
 onMounted(() => {
   initModeTurnAnimation();
-  window.addEventListener("keydown", handleArrowKeyControl);
   isGestureControlSupported.value = Boolean(navigator.mediaDevices?.getUserMedia);
   gestureStatusText.value = isGestureControlSupported.value
     ? "点击“开启”后授权摄像头，即可用手势控制页面。"
@@ -697,7 +684,6 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   stopGestureControl();
-  window.removeEventListener("keydown", handleArrowKeyControl);
   if (modeObserver) {
     modeObserver.disconnect();
     modeObserver = null;

@@ -1,5 +1,5 @@
 <template>
-  <div v-if="shouldRender" class="global-gesture-control" :class="{ 'is-active': isGestureControlActive }">
+  <div class="global-gesture-control" :class="{ 'is-active': isGestureControlActive }">
     <div class="global-gesture-head">
       <strong>手势操控</strong>
       <button
@@ -12,14 +12,15 @@
       </button>
     </div>
     <p class="global-gesture-status">{{ gestureStatusText }}</p>
-    <p class="global-gesture-tips">握拳：上滚｜张开：下滚｜右挥展开侧边栏｜左挥收起侧边栏｜也可用键盘方向键</p>
+    <p class="global-gesture-tips">
+      左右与上下分离识别（防混淆），需连续 5 帧同方向才触发｜左/右切换顶部导航，上/下滚动页面
+    </p>
     <video ref="gestureVideoRef" class="global-gesture-video" autoplay muted playsinline></video>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { usePageData } from "vuepress/client";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 
 let gestureModel: HandTrackModel | null = null;
 let gestureModelLoadingTask: Promise<void> | null = null;
@@ -29,8 +30,9 @@ let gestureAnchorPoint: { x: number; y: number; at: number } | null = null;
 let gestureLostFrameCount = 0;
 let gestureCooldownUntil = 0;
 let gestureLastHintAt = 0;
-let gestureClosedPoseCount = 0;
-let gestureOpenPoseCount = 0;
+let gestureDirectionCandidate: GestureDirection | null = null;
+let gestureDirectionStableCount = 0;
+let gestureNoDirectionFrameCount = 0;
 
 type HandTrackPrediction = {
   bbox?: [number, number, number, number] | number[];
@@ -56,6 +58,8 @@ type HandTrackModule = {
   load: (options?: HandTrackModelOptions) => Promise<HandTrackModel>;
 };
 
+type GestureDirection = "left" | "right" | "up" | "down";
+
 const gestureClassLabelMap: Record<number, string> = {
   1: "open",
   2: "closed",
@@ -67,15 +71,25 @@ const gestureClassLabelMap: Record<number, string> = {
 };
 
 const gestureHandLabelSet = new Set(["open", "closed", "pinch", "point", "pointtip", "pinchtip", "hand"]);
-const gestureSwipeThresholdX = 0.06;
+const gestureSwipeThresholdX = 0.042;
+const gestureSwipeThresholdY = 0.042;
 const gestureTrackResetAfterMs = 900;
-const gestureCooldownMs = 600;
+const gestureCooldownMs = 520;
 const gestureHintIntervalMs = 680;
-const gestureDirectionRatio = 1.02;
-const gesturePoseStableFrames = 3;
-
-const page = usePageData();
-const shouldRender = computed(() => !Boolean(page.value.frontmatter.home));
+const gestureHorizontalDominanceRatio = 1.24;
+const gestureVerticalDominanceRatio = 1.3;
+const gestureHorizontalAngleLimitDeg = 34;
+const gestureVerticalAngleMinDeg = 56;
+const gestureDirectionMotionMin = 0.016;
+const gestureEdgeZoneRatio = 0.14;
+const gestureDirectionStableFrames = 5;
+const gestureNeutralResetFrames = 2;
+const gestureAnchorRefreshAfterMs = 240;
+const gestureAnchorRefreshDistance = 0.022;
+const gestureVerticalZoneTop = 0.3;
+const gestureVerticalZoneBottom = 0.7;
+const gestureVerticalZoneMinX = 0.24;
+const gestureVerticalZoneMaxX = 0.76;
 
 const gestureVideoRef = ref<HTMLVideoElement | null>(null);
 const isGestureControlSupported = ref(false);
@@ -154,8 +168,88 @@ const isElementVisible = (element: HTMLElement | null): element is HTMLElement =
   return style.display !== "none" && style.visibility !== "hidden";
 };
 
+const directionDisplayMap: Record<GestureDirection, string> = {
+  up: "上",
+  down: "下",
+  left: "左",
+  right: "右",
+};
+
+const pickEdgeDirection = (point: { x: number; y: number }): GestureDirection | null => {
+  const leftDistance = point.x;
+  const rightDistance = 1 - point.x;
+  const topDistance = point.y;
+  const bottomDistance = 1 - point.y;
+  const nearestDistance = Math.min(leftDistance, rightDistance, topDistance, bottomDistance);
+
+  if (nearestDistance > gestureEdgeZoneRatio) return null;
+  if (nearestDistance === leftDistance) return "left";
+  if (nearestDistance === rightDistance) return "right";
+  if (nearestDistance === topDistance) return "up";
+  return "down";
+};
+
+const resetDirectionTracking = (): void => {
+  gestureDirectionCandidate = null;
+  gestureDirectionStableCount = 0;
+  gestureNoDirectionFrameCount = 0;
+};
+
+const detectDirectionCandidate = (
+  point: { x: number; y: number },
+  anchorPoint: { x: number; y: number },
+): GestureDirection | null => {
+  const deltaX = point.x - anchorPoint.x;
+  const deltaY = point.y - anchorPoint.y;
+  const absDeltaX = Math.abs(deltaX);
+  const absDeltaY = Math.abs(deltaY);
+  const movement = Math.hypot(deltaX, deltaY);
+
+  const isHorizontalDominant =
+    absDeltaX >= gestureSwipeThresholdX && absDeltaX >= absDeltaY * gestureHorizontalDominanceRatio;
+  const isVerticalDominant =
+    absDeltaY >= gestureSwipeThresholdY && absDeltaY >= absDeltaX * gestureVerticalDominanceRatio;
+
+  if (movement >= gestureDirectionMotionMin) {
+    const angleDeg = (Math.atan2(deltaY, deltaX) * 180) / Math.PI;
+    const absAngle = Math.abs(angleDeg);
+    const isNearHorizontal = absAngle <= gestureHorizontalAngleLimitDeg || absAngle >= 180 - gestureHorizontalAngleLimitDeg;
+    const isNearVertical = absAngle >= gestureVerticalAngleMinDeg && absAngle <= 180 - gestureVerticalAngleMinDeg;
+
+    if (isHorizontalDominant && isNearHorizontal) {
+      return deltaX < 0 ? "left" : "right";
+    }
+
+    if (isVerticalDominant && isNearVertical) {
+      return deltaY < 0 ? "up" : "down";
+    }
+
+    if (isHorizontalDominant) {
+      return deltaX < 0 ? "left" : "right";
+    }
+
+    if (isVerticalDominant) {
+      return deltaY < 0 ? "up" : "down";
+    }
+
+    return null;
+  }
+
+  const edgeDirection = pickEdgeDirection(point);
+  if (edgeDirection) {
+    return edgeDirection;
+  }
+
+  const isInVerticalControlBand = point.x >= gestureVerticalZoneMinX && point.x <= gestureVerticalZoneMaxX;
+  if (isInVerticalControlBand) {
+    if (point.y <= gestureVerticalZoneTop) return "up";
+    if (point.y >= gestureVerticalZoneBottom) return "down";
+  }
+
+  return null;
+};
+
 const applyHorizontalGesture = (direction: "left" | "right", source: "gesture" | "keyboard" = "gesture"): void => {
-  const themeContainer = document.querySelector<HTMLElement>(".theme-container");
   const label =
     source === "gesture"
       ? direction === "left"
@@ -165,73 +259,69 @@ const applyHorizontalGesture = (direction: "left" | "right", source: "gesture" |
         ? "键盘左方向键"
         : "键盘右方向键";
 
-  if (!themeContainer || themeContainer.classList.contains("no-sidebar")) {
-    gestureStatusText.value = `${label}：当前页面没有可控侧边栏。`;
+  const navbar = document.querySelector<HTMLElement>(".vp-navbar");
+  if (!navbar) {
+    gestureStatusText.value = `${label}：未找到顶部导航。`;
     return;
   }
 
-  const mobileToggleButton = document.querySelector<HTMLButtonElement>(".vp-toggle-sidebar-button");
-  const desktopToggle = document.querySelector<HTMLElement>(".toggle-sidebar-wrapper");
-  const mobileMask = document.querySelector<HTMLElement>(".vp-sidebar-mask");
-  const isMobileMode = isElementVisible(mobileToggleButton);
-  const isDesktopCollapsibleMode = !isMobileMode && isElementVisible(desktopToggle);
-  const isMobileSidebarOpen = themeContainer.classList.contains("sidebar-open");
-  const isDesktopSidebarCollapsed = themeContainer.classList.contains("sidebar-collapsed");
+  const selectorCandidates = [".vp-nav-links a[href]", ".vp-nav-item a[href]", ".vp-navbar a[href]"];
+  let navLinks: HTMLAnchorElement[] = [];
 
-  if (direction === "right") {
-    if (isMobileMode) {
-      if (isMobileSidebarOpen) {
-        gestureStatusText.value = `${label}：侧边栏已展开。`;
-        return;
-      }
-
-      mobileToggleButton.click();
-      gestureStatusText.value = `${label}：侧边栏展开。`;
-      return;
+  for (const selector of selectorCandidates) {
+    const foundLinks = Array.from(navbar.querySelectorAll<HTMLAnchorElement>(selector)).filter((link) =>
+      isElementVisible(link),
+    );
+    if (foundLinks.length >= 2) {
+      navLinks = foundLinks;
+      break;
     }
+  }
 
-    if (isDesktopCollapsibleMode) {
-      if (!isDesktopSidebarCollapsed) {
-        gestureStatusText.value = `${label}：侧边栏已展开。`;
-        return;
-      }
-
-      desktopToggle.click();
-      gestureStatusText.value = `${label}：侧边栏展开。`;
-      return;
-    }
-
-    gestureStatusText.value = `${label}：当前宽屏侧边栏默认展开。`;
+  if (navLinks.length < 2) {
+    gestureStatusText.value = `${label}：顶部导航项不足，无法左右切换。`;
     return;
   }
 
-  if (isMobileMode) {
-    if (!isMobileSidebarOpen) {
-      gestureStatusText.value = `${label}：侧边栏已收起。`;
-      return;
-    }
-
-    if (isElementVisible(mobileMask)) {
-      mobileMask.click();
-    } else {
-      mobileToggleButton.click();
-    }
-    gestureStatusText.value = `${label}：侧边栏收起。`;
-    return;
+  const dedupedLinks: HTMLAnchorElement[] = [];
+  const linkKeySet = new Set<string>();
+  for (const link of navLinks) {
+    const key = `${link.textContent?.trim() || ""}::${link.href}`;
+    if (linkKeySet.has(key)) continue;
+    linkKeySet.add(key);
+    dedupedLinks.push(link);
   }
 
-  if (isDesktopCollapsibleMode) {
-    if (isDesktopSidebarCollapsed) {
-      gestureStatusText.value = `${label}：侧边栏已收起。`;
-      return;
+  const normalizePath = (href: string): string => {
+    try {
+      const url = new URL(href, window.location.origin);
+      const pathname = url.pathname.replace(/\/+$/, "");
+      return pathname || "/";
+    } catch {
+      return "/";
     }
+  };
 
-    desktopToggle.click();
-    gestureStatusText.value = `${label}：侧边栏收起。`;
-    return;
+  const currentPath = normalizePath(window.location.pathname);
+  let activeIndex = dedupedLinks.findIndex((link) => normalizePath(link.pathname) === currentPath);
+
+  if (activeIndex < 0) {
+    activeIndex = dedupedLinks.findIndex((link) => {
+      const linkPath = normalizePath(link.pathname);
+      if (linkPath === "/") return currentPath === "/";
+      return currentPath.startsWith(linkPath);
+    });
   }
 
-  gestureStatusText.value = `${label}：当前宽屏不支持收起侧边栏。`;
+  if (activeIndex < 0) activeIndex = 0;
+
+  const offset = direction === "right" ? 1 : -1;
+  const nextIndex = (activeIndex + offset + dedupedLinks.length) % dedupedLinks.length;
+  const nextLink = dedupedLinks[nextIndex];
+  const targetTitle = nextLink.textContent?.trim() || normalizePath(nextLink.pathname);
+
+  nextLink.click();
+  gestureStatusText.value = `${label}：顶部导航切换到 ${targetTitle}。`;
 };
 
 const applyVerticalGesture = (direction: "up" | "down", source: "gesture" | "keyboard" = "gesture"): void => {
@@ -240,10 +330,19 @@ const applyVerticalGesture = (direction: "up" | "down", source: "gesture" | "key
   window.scrollBy({ top: amount, behavior: "smooth" });
 
   if (source === "gesture") {
-    gestureStatusText.value = direction === "up" ? "检测到握拳：页面上移。" : "检测到张开手掌：页面下移。";
+    gestureStatusText.value = direction === "up" ? "检测到上翻手势：页面上移。" : "检测到下翻手势：页面下移。";
   } else {
     gestureStatusText.value = direction === "up" ? "键盘上方向键：页面上移。" : "键盘下方向键：页面下移。";
   }
+};
+
+const triggerDirectionalAction = (direction: GestureDirection, source: "gesture" | "keyboard" = "gesture"): void => {
+  if (direction === "left" || direction === "right") {
+    applyHorizontalGesture(direction, source);
+    return;
+  }
+
+  applyVerticalGesture(direction, source);
 };
 
 const handleGesturePrediction = (prediction: HandTrackPrediction, video: HTMLVideoElement): void => {
@@ -260,6 +359,7 @@ const handleGesturePrediction = (prediction: HandTrackPrediction, video: HTMLVid
 
   if (!gestureAnchorPoint) {
     gestureAnchorPoint = point;
+    resetDirectionTracking();
     gestureStatusText.value = "已检测到手部，准备识别滑动动作。";
     return;
   }
@@ -267,61 +367,60 @@ const handleGesturePrediction = (prediction: HandTrackPrediction, video: HTMLVid
   const anchorAge = point.at - gestureAnchorPoint.at;
   if (anchorAge > gestureTrackResetAfterMs) {
     gestureAnchorPoint = point;
+    resetDirectionTracking();
     return;
   }
 
   const deltaX = point.x - gestureAnchorPoint.x;
   const deltaY = point.y - gestureAnchorPoint.y;
+  const absDeltaX = Math.abs(deltaX);
+  const absDeltaY = Math.abs(deltaY);
 
-  if (now < gestureCooldownUntil) return;
-
-  if (Math.abs(deltaX) >= gestureSwipeThresholdX && Math.abs(deltaX) > Math.abs(deltaY) * gestureDirectionRatio) {
-    gestureCooldownUntil = now + gestureCooldownMs;
-    applyHorizontalGesture(deltaX < 0 ? "left" : "right", "gesture");
-    gestureAnchorPoint = null;
-    gestureClosedPoseCount = 0;
-    gestureOpenPoseCount = 0;
+  if (now < gestureCooldownUntil) {
+    resetDirectionTracking();
+    if (anchorAge > gestureAnchorRefreshAfterMs) {
+      gestureAnchorPoint = point;
+    }
     return;
   }
 
-  const label = getPredictionLabel(prediction);
-  const isClosedPose = label.includes("closed");
-  const isOpenPose = label.includes("open");
+  const candidateDirection = detectDirectionCandidate(point, gestureAnchorPoint);
+  if (candidateDirection) {
+    gestureNoDirectionFrameCount = 0;
+    if (gestureDirectionCandidate === candidateDirection) {
+      gestureDirectionStableCount += 1;
+    } else {
+      gestureDirectionCandidate = candidateDirection;
+      gestureDirectionStableCount = 1;
+    }
 
-  if (isClosedPose) {
-    gestureClosedPoseCount += 1;
-    gestureOpenPoseCount = 0;
-  } else if (isOpenPose) {
-    gestureOpenPoseCount += 1;
-    gestureClosedPoseCount = 0;
+    const displayDirection = directionDisplayMap[candidateDirection];
+    trySetGestureHint(`识别到${displayDirection}方向 (${gestureDirectionStableCount}/${gestureDirectionStableFrames})`, now);
+
+    if (gestureDirectionStableCount >= gestureDirectionStableFrames) {
+      gestureCooldownUntil = now + gestureCooldownMs;
+      triggerDirectionalAction(candidateDirection, "gesture");
+      gestureAnchorPoint = point;
+      resetDirectionTracking();
+      return;
+    }
   } else {
-    gestureClosedPoseCount = 0;
-    gestureOpenPoseCount = 0;
-  }
-
-  if (gestureClosedPoseCount >= gesturePoseStableFrames) {
-    gestureCooldownUntil = now + gestureCooldownMs;
-    applyVerticalGesture("up", "gesture");
-    gestureAnchorPoint = point;
-    gestureClosedPoseCount = 0;
-    gestureOpenPoseCount = 0;
-    return;
-  }
-
-  if (gestureOpenPoseCount >= gesturePoseStableFrames) {
-    gestureCooldownUntil = now + gestureCooldownMs;
-    applyVerticalGesture("down", "gesture");
-    gestureAnchorPoint = point;
-    gestureClosedPoseCount = 0;
-    gestureOpenPoseCount = 0;
-    return;
+    gestureNoDirectionFrameCount += 1;
+    if (gestureNoDirectionFrameCount >= gestureNeutralResetFrames) {
+      resetDirectionTracking();
+    }
   }
 
   if (
-    Math.abs(deltaX) < gestureSwipeThresholdX * 0.36 &&
-    Math.abs(deltaY) < gestureSwipeThresholdX * 0.36 &&
-    anchorAge > 260
+    absDeltaX < gestureAnchorRefreshDistance &&
+    absDeltaY < gestureAnchorRefreshDistance &&
+    anchorAge > gestureAnchorRefreshAfterMs
   ) {
+    gestureAnchorPoint = point;
+    return;
+  }
+
+  if (anchorAge > gestureAnchorRefreshAfterMs * 1.7) {
     gestureAnchorPoint = point;
   }
 };
@@ -340,8 +439,7 @@ const stopGestureControl = (statusText?: string): void => {
   gestureLostFrameCount = 0;
   gestureCooldownUntil = 0;
   gestureLastHintAt = 0;
-  gestureClosedPoseCount = 0;
-  gestureOpenPoseCount = 0;
+  resetDirectionTracking();
 
   if (gestureStream) {
     gestureStream.getTracks().forEach((track) => track.stop());
@@ -362,7 +460,7 @@ const stopGestureControl = (statusText?: string): void => {
 };
 
 const runGestureLoop = async (): Promise<void> => {
-  if (!shouldRender.value || !isGestureControlActive.value || !gestureModel || !gestureVideoRef.value) return;
+  if (!isGestureControlActive.value || !gestureModel || !gestureVideoRef.value) return;
 
   const video = gestureVideoRef.value;
   if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
@@ -380,8 +478,7 @@ const runGestureLoop = async (): Promise<void> => {
 
     if (!primaryPrediction) {
       gestureLostFrameCount += 1;
-      gestureClosedPoseCount = 0;
-      gestureOpenPoseCount = 0;
+      resetDirectionTracking();
       if (gestureLostFrameCount > 12) {
         gestureAnchorPoint = null;
       }
@@ -439,7 +536,7 @@ const ensureGestureModelLoaded = async (): Promise<void> => {
 };
 
 const startGestureControl = async (): Promise<void> => {
-  if (!shouldRender.value || !isGestureControlSupported.value || isGestureControlActive.value || isGestureControlLoading.value) return;
+  if (!isGestureControlSupported.value || isGestureControlActive.value || isGestureControlLoading.value) return;
 
   const video = gestureVideoRef.value;
   if (!video) return;
@@ -476,8 +573,7 @@ const startGestureControl = async (): Promise<void> => {
     gestureAnchorPoint = null;
     gestureLostFrameCount = 0;
     gestureCooldownUntil = 0;
-    gestureClosedPoseCount = 0;
-    gestureOpenPoseCount = 0;
+    resetDirectionTracking();
     void runGestureLoop();
   } catch (error) {
     console.error("handtrack start failed:", error);
@@ -503,56 +599,39 @@ const shouldIgnoreKeyboardTarget = (target: EventTarget | null): boolean => {
 };
 
 const handleArrowKeyControl = (event: KeyboardEvent): void => {
-  if (!shouldRender.value || shouldIgnoreKeyboardTarget(event.target)) return;
+  if (shouldIgnoreKeyboardTarget(event.target)) return;
 
   if (event.key === "ArrowUp") {
     event.preventDefault();
-    applyVerticalGesture("up", "keyboard");
+    triggerDirectionalAction("up", "keyboard");
     return;
   }
 
   if (event.key === "ArrowDown") {
     event.preventDefault();
-    applyVerticalGesture("down", "keyboard");
+    triggerDirectionalAction("down", "keyboard");
     return;
   }
 
   if (event.key === "ArrowLeft") {
     event.preventDefault();
-    applyHorizontalGesture("left", "keyboard");
+    triggerDirectionalAction("left", "keyboard");
     return;
   }
 
   if (event.key === "ArrowRight") {
     event.preventDefault();
-    applyHorizontalGesture("right", "keyboard");
+    triggerDirectionalAction("right", "keyboard");
   }
 };
-
-watch(
-  shouldRender,
-  (visible) => {
-    if (!visible) {
-      stopGestureControl();
-      return;
-    }
-
-    gestureStatusText.value = isGestureControlSupported.value
-      ? "点击“开启”后授权摄像头，即可用手势控制页面。"
-      : "当前浏览器不支持摄像头能力，无法使用手势控制。";
-  },
-  { immediate: true },
-);
 
 onMounted(() => {
   window.addEventListener("keydown", handleArrowKeyControl);
   isGestureControlSupported.value = Boolean(navigator.mediaDevices?.getUserMedia);
 
-  if (shouldRender.value) {
-    gestureStatusText.value = isGestureControlSupported.value
-      ? "点击“开启”后授权摄像头，即可用手势控制页面。"
-      : "当前浏览器不支持摄像头能力，无法使用手势控制。";
-  }
+  gestureStatusText.value = isGestureControlSupported.value
+    ? "点击“开启”后授权摄像头，即可用手势控制页面。"
+    : "当前浏览器不支持摄像头能力，无法使用手势控制。";
 });
 
 onBeforeUnmount(() => {
